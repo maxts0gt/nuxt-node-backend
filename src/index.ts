@@ -3,11 +3,13 @@ import cors from 'cors';
 import { createConnection } from 'typeorm';
 import { routes } from './routes';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 const app = express();
 
 createConnection().then(() => {
+  app.use(cookieParser());
   app.use(express.json());
   app.use(
     cors({
