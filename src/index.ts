@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { createConnection } from 'typeorm';
+import { routes } from './routes';
 
 const app = express();
 
@@ -12,9 +13,7 @@ createConnection().then(() => {
     })
   );
 
-  app.get('/', (req: Request, res: Response) => {
-    res.send('Hello World');
-  });
+  routes(app);
 
   app.listen(8000, () => {
     console.log('Listening on port: 8000');
