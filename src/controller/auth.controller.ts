@@ -5,24 +5,28 @@ import bcryptjs from 'bcryptjs';
 import { sign, verify } from 'jsonwebtoken';
 
 export const Register = async (req: Request, res: Response) => {
-  const body = req.body;
+  const { password, password_confirm, ...body } = req.body;
 
-  if (body.password !== body.password_confirm) {
+  if (password !== password_confirm) {
     return res.status(400).send({ message: 'Passwords do not match' });
   }
 
-  const { password, ...user } = await getRepository(User).save({
-    first_name: body.first_name,
-    last_name: body.last_name,
-    email: body.email,
-    password: await bcryptjs.hash(body.password, 10),
+  const user = await getRepository(User).save({
+    ...body,
+    password: await bcryptjs.hash(password, 10),
     is_ambassador: false,
   });
+
+  delete user.password;
+
   res.send(user);
 };
 
 export const Login = async (req: Request, res: Response) => {
-  const user = await getRepository(User).findOne({ email: req.body.email });
+  const user = await getRepository(User).findOne(
+    { email: req.body.email },
+    { select: ['id', 'password'] }
+  );
 
   if (!user) {
     return res.status(400).send({ message: 'Invalid credentials' });
@@ -43,13 +47,22 @@ export const Login = async (req: Request, res: Response) => {
 };
 
 export const AuthenticatedUser = async (req: Request, res: Response) => {
-  const jwt = req.cookies['jwt'];
+  try {
+    const jwt = req.cookies['jwt'];
 
-  const payload: any = verify(jwt, process.env.SECRET_KEY);
+    const payload: any = verify(jwt, process.env.SECRET_KEY);
 
-  if (!payload) {
+    if (!payload) {
+      return res.status(401).send({ message: 'Unauthenticated' });
+    }
+    const { password, ...user } = await getRepository(User).findOne(payload.id);
+    res.send(user);
+  } catch (error) {
     return res.status(401).send({ message: 'Unauthenticated' });
   }
-  const { password, ...user } = await getRepository(User).findOne(payload.id);
-  res.send(user);
+};
+
+export const Logout = async (req: Request, res: Response) => {
+  res.cookie('jwt', '', { maxAge: 0 });
+  res.send({ message: 'Success' });
 };
